@@ -1,0 +1,12 @@
+opencv-python 
+pytesseract 
+scikit-learn 
+matplotlib 
+pandas 
+seaborn
+sentence-transformers
+python-dotenv
+google-generativeai
+pillow
+streamlit
+sqlite3

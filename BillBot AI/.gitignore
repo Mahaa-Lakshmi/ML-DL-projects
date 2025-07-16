@@ -1,2 +1,6 @@
 backup/
 venv/
+.env
+invoices.db
+pre-processing.ipynb
+__pycache__/
