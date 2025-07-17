@@ -30,33 +30,32 @@ if mode == "Single Invoice":
             tmp_file.write(uploaded_file.read())
             image_path = tmp_file.name
 
-        col1, col2 = st.columns(2)
-        with col1:
-            st.image(image_path, caption="📥 Uploaded Invoice", use_container_width=True)
-
-            # === Run pipeline ===
-            ocr_output = ocr_agent.run(image_path)
-            entity_output = entity_agent.run(ocr_output)
-            entity_output["filename"] = os.path.basename(uploaded_file.name)
-            validation_output = validator_agent.run(entity_output)
-
-            image, df = visualizer_agent.run({
-                "image_path": image_path,
-                "entities": validation_output["entities"]
-            })
-
-            # Insert into SQLite
-            sqlite_agent.run(df)          
-
         
-        with col2:
-            st.image(image, caption="📌 OCR Bounding Box Output", use_container_width=True)
+            #st.image(image_path, caption="📥 Uploaded Invoice", use_container_width=True)
+        # === Run pipeline ===
+        ocr_output = ocr_agent.run(image_path)
+        entity_output = entity_agent.run(ocr_output)
+        entity_output["filename"] = os.path.basename(uploaded_file.name)
+        validation_output = validator_agent.run(entity_output)
+        image, df = visualizer_agent.run({
+            "image_path": image_path,
+            "entities": validation_output["entities"]
+        })
+        # Insert into SQLite
+        sqlite_agent.run(df)  
 
         # Display
-        st.success("✅ Invoice processed successfully!") 
-        for i in df.drop(columns=["text"]):
-                   
-        st.dataframe(df.drop(columns=["text"]), use_container_width=True)
+        st.success("✅ Invoice processed successfully!")      
+
+        col1, col2 = st.columns(2)
+        with col1:        
+            st.image(image, caption="📌 OCR Bounding Box Output", use_container_width=True)        
+        
+        #Instead of dataframe
+        with col2:
+            df_transposed = df.drop(columns=["text"]).T
+            df_transposed.columns = ['Value']
+            st.dataframe(df_transposed, use_container_width=True)
 
 # ---- BATCH MODE ----
 elif mode == "Batch Processing":
@@ -67,7 +66,7 @@ elif mode == "Batch Processing":
             st.error("❌ Folder not found.")
         else:
             all_dfs = []
-            files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.png'))]
+            files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.png',".jpeg"))]
             progress = st.progress(0)
             for i, file in enumerate(files):
                 image_path = os.path.join(folder_path, file)

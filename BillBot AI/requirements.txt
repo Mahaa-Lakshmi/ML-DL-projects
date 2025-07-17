@@ -10,3 +10,5 @@ google-generativeai
 pillow
 streamlit
 sqlite3
+faiss-cpu
+llama-cpp-python

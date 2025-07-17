@@ -4,3 +4,4 @@ venv/
 invoices.db
 pre-processing.ipynb
 __pycache__/
+models/
