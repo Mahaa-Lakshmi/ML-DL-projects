@@ -11,12 +11,16 @@ import requests
 import time
 import google.generativeai as genai
 import sqlite3
+from llama_cpp import Llama
+import torch
 
 # Configure API key
 genai.configure(api_key=os.getenv("GEMINI_KEY"))
 
 # Initialize the model (e.g., Gemini Pro)
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-2.0-flash')
+
+MODEL_PATH = "models/gemma-2-2b-it-Q4_K_M.gguf"
 
 
 pytesseract.pytesseract.tesseract_cmd = r"C:/Users/bmaha/AppData/Local/Programs/Tesseract-OCR/tesseract.exe"
@@ -37,14 +41,17 @@ class BaseAgent:
 class OCRAgent(BaseAgent):
     def __init__(self):
         super().__init__("OCR")
+        print("Inside OCR init")
         
     def cleaning_text(self,text):
+        print("cleaning text OCR")
         text = re.sub(r'\n+', ' ', text)
         #text = re.sub(r'[^a-zA-Z0-9 ₹.,:/-]', ' ', text)
         text = re.sub(r'\s+', ' ', text).strip()
         return text.lower()
 
     def run(self, image_path):
+        print("ocr run")
         try:
             img = cv2.imread(image_path)
             filename=image_path.split("/")[-1]
@@ -69,8 +76,10 @@ class OCRAgent(BaseAgent):
 class SemanticEntityAgentWithGemini(BaseAgent):
     def __init__(self):
         super().__init__("SemanticEntity")
+        print("Inside Gemini init")
 
     def run(self, input_data):
+        print("Inside gemini run")
         text = input_data.get("text", "")
         text = [line.strip() for line in text.split("\n") if line.strip()]
         #curr_date = date.today()
@@ -140,8 +149,10 @@ class SemanticEntityAgentWithGemini(BaseAgent):
 class ValidationAgent(BaseAgent):
     def __init__(self):
         super().__init__("Validation")
+        print("Inside validation init")
 
     def run(self, input_data):
+        print("Inside validation run")
         missing_fields = []
 
         #validate input data
@@ -191,15 +202,105 @@ class ValidationAgent(BaseAgent):
             "missing": missing_fields,
             "entities": input_data
         }
+    
+#Gemma Agent for batch processing
+class SemanticEntityAgentWithGemma(BaseAgent):
+    def __init__(self):
+        super().__init__("SemanticGemma")
+        print("✅ Initialized SemanticGemma Agent")
 
+        self.llm = Llama(
+            model_path=MODEL_PATH,
+            n_ctx=1024,
+            n_threads=4,
+            n_batch=128,
+            use_mmap=True,
+            use_mlock=False,
+            verbose=False,
+        )
 
+    def run(self, input_data: dict) -> dict:
+        print("📥 Inside Gemma `run` method")
+        raw_text = input_data.get("text", "")
+        cleaned_text = "\n".join(line.strip() for line in raw_text.split("\n") if line.strip())
+
+        prompt = self.build_prompt(cleaned_text)
+        print("🚀 Sending prompt to Gemma...")
+
+        try:
+            response = self.llm(prompt, max_tokens=512, stop=["###"], echo=False)
+            full_output = response["choices"][0]["text"].strip() if isinstance(response, dict) else response
+            print("🧠 Raw Gemma Output:\n", full_output)
+        except Exception as e:
+            print("❌ LLM Execution Error:", e)
+            return {"error": str(e)}
+
+        parsed_json = self.extract_json(full_output)
+        if parsed_json:
+            parsed_json.update(input_data)
+            return parsed_json
+        else:
+            return {"error": "Failed to parse JSON", "raw_output": full_output}
+
+    def build_prompt(self, invoice_text: str) -> str:
+        return f"""
+            Extract the following fields from the invoice text and return them as a JSON object:
+            - seller_name
+            - invoice_no
+            - invoice_date
+            - buyer_name
+            - total
+            
+            Format the invoice_date to "DD/MM/YYYY", and provide only the float for the total.
+            
+            Example Input:
+            Lopez, Miller and Romero
+            60464 Curtis Gateway
+            East Keith, IN 57123
+            
+            Invoice Date: 05.08.2007
+            Invoice No: 802205
+            
+            To: 
+            Hayes LLC
+            Mercedes Martinez
+            960 Hurley Springs North
+            Alyssa, RI 49322
+            
+            Total: $534.11
+            
+            Expected Output:
+            {{
+              "seller": "Lopez, Miller and Romero",
+              "invoice_no": "802205",
+              "invoice_date": "05/08/2007",
+              "buyer": "Hayes LLC",
+              "currency": "USD",
+              "total": "534.11"
+            }}
+            
+            Now process this input:
+            {invoice_text}
+            ###
+            """
+
+    def extract_json(self, text: str) -> dict | None:
+        try:
+            start = text.index("{")
+            end = text.rindex("}") + 1
+            return json.loads(text[start:end])
+        except (ValueError, json.JSONDecodeError) as e:
+            print("⚠️ JSON parsing failed:", e)
+            return None
 #Visualizer Agent
 
 class VisualizerAgent(BaseAgent):
     def __init__(self):
         super().__init__("Visualizer")
+        print("Inside visual init")
 
     def draw_boxes(self, image, data, column_text, color, col_name):
+        print("Inside draw boxes")
         # Skip if the value is missing or empty
         if not column_text or not isinstance(column_text, str) or column_text.strip() == "":
             print(f"⚠️ Skipping box for '{col_name}' — value is empty or missing.")
@@ -237,6 +338,7 @@ class VisualizerAgent(BaseAgent):
                         cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, 2)
 
     def run(self, input_data):
+        print("Inside visual run")
         image_path = input_data["image_path"]
         extracted_entities = input_data["entities"]
 
@@ -264,6 +366,7 @@ class VisualizerAgent(BaseAgent):
 class SQLiteAgent(BaseAgent):
     def __init__(self, db_path):
         super().__init__("SQLite")
+        print("Inside sqlite init")
         self.db_path = db_path
         self.connection = sqlite3.connect(self.db_path)
         self.cursor = self.connection.cursor()

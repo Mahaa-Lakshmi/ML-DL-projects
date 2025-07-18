@@ -3,5 +3,6 @@ venv/
 .env
 invoices.db
 pre-processing.ipynb
+llm_sample.py
 __pycache__/
 models/

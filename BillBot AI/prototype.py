@@ -1,4 +1,4 @@
-from agents import OCRAgent,SemanticEntityAgentWithGemini,ValidationAgent,VisualizerAgent,SQLiteAgent
+from agents import OCRAgent,SemanticEntityAgentWithGemini,SemanticEntityAgentWithGemma,ValidationAgent,VisualizerAgent,SQLiteAgent
 import streamlit as st
 import sqlite3
 import pandas as pd
@@ -13,12 +13,17 @@ st.title("📄 BillBot AI – Invoice Analyzer")
 st.sidebar.markdown("### Upload or Select Mode")
 mode = st.sidebar.radio("Choose input mode:", ["Single Invoice", "Batch Processing"])
 
+print("Initializing Agents")
+
 # Initialize agents
 ocr_agent = OCRAgent()
 entity_agent = SemanticEntityAgentWithGemini()
+batch_entity_agent=SemanticEntityAgentWithGemma()
 validator_agent = ValidationAgent()
 visualizer_agent = VisualizerAgent()
 sqlite_agent = SQLiteAgent("invoices.db")
+
+print("Ready for invoices")
 
 # ---- SINGLE INVOICE MODE ----
 if mode == "Single Invoice":
@@ -72,7 +77,7 @@ elif mode == "Batch Processing":
                 image_path = os.path.join(folder_path, file)
                 try:
                     ocr_output = ocr_agent.run(image_path)
-                    entity_output = entity_agent.run(ocr_output)
+                    entity_output = batch_entity_agent.run(ocr_output)
                     entity_output["filename"] = file
                     validation_output = validator_agent.run(entity_output)
                     df = pd.DataFrame([validation_output["entities"]])
