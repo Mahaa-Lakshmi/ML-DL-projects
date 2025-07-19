@@ -8,9 +8,9 @@ warnings.filterwarnings("ignore")
 
 
 # Sample ground truth
-ground_truth = pd.read_csv("test_results/ground_truth.csv")  # filename, vendor, buyer, date, etc.
-gemini_outputs = pd.read_csv("test_results/gemini_output_aggregated.csv")
-mistral_outputs = pd.read_csv("test_results/mistral_output_aggregated.csv")
+ground_truth = pd.read_csv("data/ground_truth.csv")  # filename, vendor, buyer, date, etc.
+gemini_outputs = pd.read_csv("data/gemini_output_aggregated.csv")
+mistral_outputs = pd.read_csv("data/mistral_output_aggregated.csv")
 
 # Function to evaluate a single field
 def field_accuracy(gt, pred, field):
