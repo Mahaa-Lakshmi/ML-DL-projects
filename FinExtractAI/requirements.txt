@@ -9,6 +9,14 @@ python-dotenv
 google-generativeai
 pillow
 streamlit
-sqlite3
-faiss-cpu
 llama-cpp-python
+tesseract-ocr 
+libtesseract-dev
+transformers[torch] 
+accelerate 
+auto-gptq 
+optimum  
+scipy  
+peft 
+trl 
+sentencepiece
