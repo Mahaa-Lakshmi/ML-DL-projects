@@ -1,9 +1,7 @@
-from agents import OCRAgent,SemanticEntityAgentWithGemini,SemanticEntityAgentWithGemma,ValidationAgent,VisualizerAgent,SQLiteAgent
+from agents import OCRAgent,SemanticEntityAgentWithGemini,SemanticEntityAgentWithMistral,ValidationAgent,VisualizerAgent,SQLiteAgent
 import streamlit as st
-import sqlite3
 import pandas as pd
 import os
-from PIL import Image
 import tempfile
 
 
@@ -18,7 +16,6 @@ print("Initializing Agents")
 # Initialize agents
 ocr_agent = OCRAgent()
 entity_agent = SemanticEntityAgentWithGemini()
-batch_entity_agent=SemanticEntityAgentWithGemma()
 validator_agent = ValidationAgent()
 visualizer_agent = VisualizerAgent()
 sqlite_agent = SQLiteAgent("invoices.db")
@@ -49,6 +46,8 @@ if mode == "Single Invoice":
         # Insert into SQLite
         sqlite_agent.run(df)  
 
+        df.to_csv("gemini_output.csv",index=False,mode="a")
+
         # Display
         st.success("✅ Invoice processed successfully!")      
 
@@ -63,8 +62,11 @@ if mode == "Single Invoice":
             st.dataframe(df_transposed, use_container_width=True)
 
 # ---- BATCH MODE ----
+
 elif mode == "Batch Processing":
     folder_path = st.text_input("Enter folder path to process batch invoices", value="backup/sampleDatasets")
+
+    model=st.selectbox("How do you want to run batch?",("Using Gemini","Using Mistral"))
 
     if st.button("🚀 Run Batch Pipeline"):
         if not os.path.exists(folder_path):
@@ -77,7 +79,12 @@ elif mode == "Batch Processing":
                 image_path = os.path.join(folder_path, file)
                 try:
                     ocr_output = ocr_agent.run(image_path)
-                    entity_output = batch_entity_agent.run(ocr_output)
+                    entity_output={}
+                    if model=="Using Gemini":
+                        entity_output = entity_agent.run(ocr_output)
+                    else:
+                        batch_entity_agent=SemanticEntityAgentWithMistral()
+                        entity_output = batch_entity_agent.run(ocr_output)
                     entity_output["filename"] = file
                     validation_output = validator_agent.run(entity_output)
                     df = pd.DataFrame([validation_output["entities"]])
@@ -99,3 +106,5 @@ elif mode == "Batch Processing":
                     file_name='invoices_output.csv',
                     mime='text/csv'
                 )
+
+                

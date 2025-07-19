@@ -11,8 +11,15 @@ import requests
 import time
 import google.generativeai as genai
 import sqlite3
-from llama_cpp import Llama
+#from llama_cpp import Llama
 import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from huggingface_hub import InferenceClient,login
+
+hugging_face_api_key=os.getenv("HUGGINGFACE_API")
+
+login(hugging_face_api_key)
+
 
 # Configure API key
 genai.configure(api_key=os.getenv("GEMINI_KEY"))
@@ -20,8 +27,7 @@ genai.configure(api_key=os.getenv("GEMINI_KEY"))
 # Initialize the model (e.g., Gemini Pro)
 model = genai.GenerativeModel('gemini-2.0-flash')
 
-MODEL_PATH = "models/gemma-2-2b-it-Q4_K_M.gguf"
-
+#MODEL_PATH = "models/gemma-2-2b-it-Q4_K_M.gguf"
 
 pytesseract.pytesseract.tesseract_cmd = r"C:/Users/bmaha/AppData/Local/Programs/Tesseract-OCR/tesseract.exe"
 
@@ -157,15 +163,39 @@ class ValidationAgent(BaseAgent):
 
         #validate input data
         #validate date
+        parsed_invoice_date = None
+        
+        date_formats_to_try = [
+            "%d/%m/%Y",  # DD/MM/YYYY (e.g., 15/07/2022)
+            "%m/%d/%Y",  # MM/DD/YYYY (e.g., 12/25/2013)
+            "%Y-%m-%d",  # YYYY-MM-DD (e.g., 2023-01-31)
+            "%d-%m-%Y",  # DD-MM-YYYY (e.g., 31-01-2023)
+            "%d.%m.%Y",  # DD.MM.YYYY (e.g., 05.08.2007) - from your example
+            "%m.%d.%Y",  # MM.DD.YYYY (e.g., 08.05.2007)
+            "%Y/%m/%d",  # YYYY/MM/DD (e.g., 2023/01/31)
+        ]
         curr_date=date.today()
 
         if not input_data["invoice_date"] or not isinstance(input_data["invoice_date"], str) or input_data["invoice_date"].strip() == "":
             input_data["error_message"]="""Date not found. Please verify before submission."""
 
-        elif datetime.strptime(input_data["invoice_date"], "%d/%m/%Y").date()>curr_date:
-            #return r"""error": "Date incorrect. Please verify before submission."""
-            input_data["error_message"]="""Date incorrect. Please verify before submission."""
-        
+        else:
+            date_str = input_data["invoice_date"].strip()
+            for fmt in date_formats_to_try:
+                try:
+                    parsed_invoice_date = datetime.strptime(date_str, fmt).date()
+                    # If parsing is successful, break the loop
+                    break
+                except ValueError:
+                    continue # Try next format if current one fails
+            
+            if parsed_invoice_date is None:
+                # If no format matched, set an error message
+                input_data["error_message"] = f"Date format incorrect for '{date_str}'. Expected one of {', '.join(date_formats_to_try)}. Please verify before submission."
+            elif parsed_invoice_date > curr_date:
+                input_data["error_message"] = "Invoice date is in the future. Please verify before submission."
+            # If parsing was successful and date is not in future, no error_message is set for date
+
         #extract amount and convert it to INR
 
         currency_code,amount=input_data["currency"],input_data["total"].strip()
@@ -202,96 +232,8 @@ class ValidationAgent(BaseAgent):
             "missing": missing_fields,
             "entities": input_data
         }
-    
-#Gemma Agent for batch processing
-class SemanticEntityAgentWithGemma(BaseAgent):
-    def __init__(self):
-        super().__init__("SemanticGemma")
-        print("✅ Initialized SemanticGemma Agent")
 
-        self.llm = Llama(
-            model_path=MODEL_PATH,
-            n_ctx=1024,
-            n_threads=4,
-            n_batch=128,
-            use_mmap=True,
-            use_mlock=False,
-            verbose=False,
-        )
 
-    def run(self, input_data: dict) -> dict:
-        print("📥 Inside Gemma `run` method")
-        raw_text = input_data.get("text", "")
-        cleaned_text = "\n".join(line.strip() for line in raw_text.split("\n") if line.strip())
-
-        prompt = self.build_prompt(cleaned_text)
-        print("🚀 Sending prompt to Gemma...")
-
-        try:
-            response = self.llm(prompt, max_tokens=512, stop=["###"], echo=False)
-            full_output = response["choices"][0]["text"].strip() if isinstance(response, dict) else response
-            print("🧠 Raw Gemma Output:\n", full_output)
-        except Exception as e:
-            print("❌ LLM Execution Error:", e)
-            return {"error": str(e)}
-
-        parsed_json = self.extract_json(full_output)
-        if parsed_json:
-            parsed_json.update(input_data)
-            return parsed_json
-        else:
-            return {"error": "Failed to parse JSON", "raw_output": full_output}
-
-    def build_prompt(self, invoice_text: str) -> str:
-        return f"""
-            Extract the following fields from the invoice text and return them as a JSON object:
-            - seller_name
-            - invoice_no
-            - invoice_date
-            - buyer_name
-            - total
-            
-            Format the invoice_date to "DD/MM/YYYY", and provide only the float for the total.
-            
-            Example Input:
-            Lopez, Miller and Romero
-            60464 Curtis Gateway
-            East Keith, IN 57123
-            
-            Invoice Date: 05.08.2007
-            Invoice No: 802205
-            
-            To: 
-            Hayes LLC
-            Mercedes Martinez
-            960 Hurley Springs North
-            Alyssa, RI 49322
-            
-            Total: $534.11
-            
-            Expected Output:
-            {{
-              "seller": "Lopez, Miller and Romero",
-              "invoice_no": "802205",
-              "invoice_date": "05/08/2007",
-              "buyer": "Hayes LLC",
-              "currency": "USD",
-              "total": "534.11"
-            }}
-            
-            Now process this input:
-            {invoice_text}
-            ###
-            """
-
-    def extract_json(self, text: str) -> dict | None:
-        try:
-            start = text.index("{")
-            end = text.rindex("}") + 1
-            return json.loads(text[start:end])
-        except (ValueError, json.JSONDecodeError) as e:
-            print("⚠️ JSON parsing failed:", e)
-            return None
 #Visualizer Agent
 
 class VisualizerAgent(BaseAgent):
@@ -396,3 +338,94 @@ class SQLiteAgent(BaseAgent):
 
     def run(self, df):
         self.insert_invoice(df)
+
+class SemanticEntityAgentWithMistral(BaseAgent):
+    def __init__(self):
+        super().__init__("SemanticMistral")
+        print("✅ Initialized SemanticMistral Agent")
+
+        self.model_id = "mistralai/Mistral-7B-Instruct-v0.2"
+
+        client = InferenceClient(
+            provider="featherless-ai",
+            api_key=hugging_face_api_key,
+        )
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_id, use_fast=True)
+
+        self.model = AutoModelForCausalLM.from_pretrained(
+            self.model_id,
+            device_map="auto",
+            torch_dtype=torch.float16,
+            low_cpu_mem_usage=True
+        )
+
+    def run(self, input_data: dict) -> dict:
+        print("📥 Inside Mistral `run` method")
+        raw_text = input_data.get("text", "")
+        cleaned_text = "\n".join(line.strip() for line in raw_text.split("\n") if line.strip())
+
+        prompt = self.build_prompt(cleaned_text)
+        print("🚀 Prompting Mistral...")
+
+        try:
+            inputs = self.tokenizer(prompt, return_tensors="pt").to("cuda")
+            outputs = self.model.generate(**inputs, max_new_tokens=512)
+            full_output = self.tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+
+            print("🧠 Raw Mistral Output:\n", full_output)
+
+            parsed_json = self.extract_json(full_output)
+            if parsed_json:
+                parsed_json.update(input_data)
+                return parsed_json
+            else:
+                return {"error": "Failed to parse JSON", "raw_output": full_output}
+
+        except Exception as e:
+            print("❌ LLM Execution Error:", e)
+            return {"error": str(e)}
+
+    def build_prompt(self, invoice_text: str) -> str:
+        return f"""
+        Extract the following fields from the invoice text and return **only** a JSON object (no explanation, no formatting):
+        - seller_name
+        - invoice_no
+        - invoice_date (format: DD/MM/YYYY)
+        - buyer_name
+        - total (float only)
+        - currency (3-letter code)
+
+        Example Input:
+        Lopez, Miller and Romero
+        Invoice Date: 05.08.2007
+        Invoice No: 802205
+        To: Hayes LLC
+        Total: $534.11
+
+        Expected Output:
+        {{
+          "seller": "Lopez, Miller and Romero",
+          "invoice_no": "802205",
+          "invoice_date": "05/08/2007",
+          "buyer": "Hayes LLC",
+          "currency": "USD",
+          "total": "534.11"
+        }}
+
+        Now process this input:
+        {invoice_text}
+        """
+
+    def extract_json(self, text: str) -> dict | None:
+        try:
+            # Try to find the last JSON object in the text
+            json_matches = list(re.finditer(r"{[\s\S]*?}", text))
+            if not json_matches:
+                return None
+
+            # Assume the last match is the actual output
+            json_text = json_matches[-1].group()
+            return json.loads(json_text)
+        except Exception as e:
+            print("⚠️ JSON parsing failed:", e)
+            return None
