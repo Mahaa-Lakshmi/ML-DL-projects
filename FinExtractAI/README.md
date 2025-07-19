@@ -1,8 +1,7 @@
-# 🧾 FinExtractAI — Intelligent Invoice Information Extractor
+# 🧾 FinExtractAI - Intelligent Invoice Information Extractor
 
 FinExtractAI is a multi-agent, modular pipeline for automated information extraction from invoice images. It combines OCR, LLM-based semantic parsing, and validation logic to extract structured fields (seller, buyer, invoice number, date, amount, currency) from unstructured documents.
 
----
 
 ## 💡 Features
 
@@ -15,7 +14,6 @@ FinExtractAI is a multi-agent, modular pipeline for automated information extrac
 - 🔁 **A/B evaluation pipeline** for LLM performance
 
 
----
 
 ## 🛠️ Agents Overview
 
@@ -28,7 +26,7 @@ FinExtractAI is a multi-agent, modular pipeline for automated information extrac
 | `VisualizerAgent`                   | Draws bounding boxes on fields                 |
 | `SQLiteAgent`                       | Stores results in SQLite DB                    |
 
----
+
 
 ## 📁 Project Structure
 
@@ -48,7 +46,6 @@ FinExtractAI is a multi-agent, modular pipeline for automated information extrac
 
 ```
 
----
 
 ## 📈 Evaluation Metrics
 
@@ -58,7 +55,6 @@ FinExtractAI is a multi-agent, modular pipeline for automated information extrac
   - F1 score evaluation  
   - Jaccard similarity
 
----
 
 ## 🧪 Sample Output
 
@@ -74,7 +70,6 @@ FinExtractAI is a multi-agent, modular pipeline for automated information extrac
 }
 ```
 
----
 
 ## 🔧 Setup & Usage
 
@@ -97,7 +92,6 @@ FinExtractAI is a multi-agent, modular pipeline for automated information extrac
     python evaluate_ab.py
     ```
 
----
 
 ## 🧠 What We’ll Learn / Demonstrate
 
@@ -109,6 +103,5 @@ FinExtractAI is a multi-agent, modular pipeline for automated information extrac
 - ✅ Data validation & enrichment (e.g., currency conversion)
 - ✅ Image annotation for debugging model predictions
 
----
 
 **Happy extracting!**
