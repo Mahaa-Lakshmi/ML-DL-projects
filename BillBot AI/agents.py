@@ -20,6 +20,7 @@ hugging_face_api_key=os.getenv("HUGGINGFACE_API")
 
 login(hugging_face_api_key)
 
+login(os.getenv("HUGGINGFACE_API"))
 
 # Configure API key
 genai.configure(api_key=os.getenv("GEMINI_KEY"))
