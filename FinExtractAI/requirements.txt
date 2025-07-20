@@ -9,7 +9,6 @@ python-dotenv
 google-generativeai
 pillow
 streamlit
-llama-cpp-python
 accelerate
 optimum
 scipy
