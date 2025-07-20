@@ -39,6 +39,7 @@ if mode == "Single Invoice":
         entity_output = entity_agent.run(ocr_output)
         entity_output["filename"] = os.path.basename(uploaded_file.name)
         validation_output = validator_agent.run(entity_output)
+        print("alidation output",validation_output)
         image, df = visualizer_agent.run({
             "image_path": image_path,
             "entities": validation_output["entities"]

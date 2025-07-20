@@ -1,0 +1,4 @@
+seller_name,invoice_no,invoice_date,buyer_name,currency,total,filename,text,error_message,seller,buyer,Total_in_INR
+barista cin no. u 15492dl.1999plc101732 st no. a mer 001 tin no. 064,,,,,,DDpvIQdUQAEHaTO.jpg,"barista cin no. u 15492dl.1999plc101732 st no. a mer 001 tin no. 064: 2 a oe amount limited ot enclave, sanik farm, barista erie saat nce service avenue de! l. khanpur, new delhi-ii",Following fields missing from image buyer seller,,,
+seller,invoice_no,invoice_date,buyer,currency,total,filename,text,error_message,Total_in_INR
+barista,u 15492dl,,,,,DDpvIQdUQAEHaTO.jpg,"barista cin no. u 15492dl.1999plc101732 st no. a mer 001 tin no. 064: 2 a oe amount limited ot enclave, sanik farm, barista erie saat nce service avenue de! l. khanpur, new delhi-ii",Date not found. Please verify before submission.Total sum not found. Please verify before submission.Exchange rate fetch failed- cannot access local variable 'currency_code' where it is not associated with a value,

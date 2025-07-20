@@ -15,12 +15,16 @@ import sqlite3
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from huggingface_hub import InferenceClient,login
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 hugging_face_api_key=os.getenv("HUGGINGFACE_API")
 
-login(hugging_face_api_key)
+#login(hugging_face_api_key)
 
-login(os.getenv("HUGGINGFACE_API"))
+#login(os.getenv("HUGGINGFACE_API"))
 
 # Configure API key
 genai.configure(api_key=os.getenv("GEMINI_KEY"))
@@ -93,10 +97,10 @@ class SemanticEntityAgentWithGemini(BaseAgent):
         
         prompt = f"""
         Extract the following fields from the invoice text and return them as a JSON object:
-        - seller_name
+        - seller
         - invoice_no
         - invoice_date
-        - buyer_name
+        - buyer
         - total
 
         Example Input:
@@ -199,7 +203,11 @@ class ValidationAgent(BaseAgent):
 
         #extract amount and convert it to INR
 
-        currency_code,amount=input_data["currency"],input_data["total"].strip()
+        if not input_data["total"] or isinstance(input_data["total"], NoneType) or input_data["total"].strip() == "":
+            input_data["error_message"]+="""Total sum not found. Please verify before submission."""
+	
+        else:
+            currency_code,amount=input_data["currency"],input_data["total"].strip()
 
         try:
             res = requests.get("https://v6.exchangerate-api.com/v6/f3f6bfc0330eb424583fd63b/latest/INR")
@@ -216,7 +224,8 @@ class ValidationAgent(BaseAgent):
                 input_data["Total_in_INR"] = converted_inr
 
         except Exception as e:
-            return {"error": "Exchange rate fetch failed", "details": str(e)}       
+            input_data["error_message"]+=f"""Exchange rate fetch failed- {str(e)}"""
+            #return {"error": "Exchange rate fetch failed", "details": str(e)}       
 
 
         for field in ["buyer", "seller", "invoice_date", "total"]:

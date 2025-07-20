@@ -10,11 +10,10 @@ google-generativeai
 pillow
 streamlit
 llama-cpp-python
-transformers[torch]
 accelerate
-auto-gptq
 optimum
 scipy
 peft
 trl
 sentencepiece
+transformers
