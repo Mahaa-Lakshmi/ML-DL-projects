@@ -203,7 +203,7 @@ class ValidationAgent(BaseAgent):
 
         #extract amount and convert it to INR
 
-        if not input_data["total"] or isinstance(input_data["total"], NoneType) or input_data["total"].strip() == "":
+        if not input_data["total"] or isinstance(input_data["total"], type(None)) or input_data["total"].strip() == "":
             input_data["error_message"]+="""Total sum not found. Please verify before submission."""
 	
         else:
